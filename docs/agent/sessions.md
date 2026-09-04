@@ -1,5 +1,21 @@
 # Sessions — RevFactor Hub
 
+## 2026-09-04 — Read-only market-map export
+
+- Added `GET /api/market-map` for the internal geography map. It requires a
+  Hub session with `market_signals:view` (401 without a session, 403 without
+  the permission) and returns opaque `map_key` points only.
+- Added migration `092_listing_location_coordinates.sql` for nullable listing
+  coordinates. `091` is already the Airbnb cancellation foundation, so the
+  workspace filename was rebased onto current `main`.
+- Extended the existing PriceLabs inventory sync to copy latitude/longitude
+  from the PriceLabs listing **read** onto those Hub columns when both values
+  are valid. No PriceLabs/PMS/OTA write, no new cron, and no event-ingestion
+  flag was enabled.
+- The export treats missing location columns and optional locality joins as
+  empty/unmapped rather than an outage, so the map can keep its geography
+  atlas until the migration is applied and a sync stores coordinates.
+
 ## 2026-09-03 — Listing status independence in `/listings`
 
 - Corrected the `/listings` status filter to use `listings.status` instead of
