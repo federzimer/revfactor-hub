@@ -107,7 +107,7 @@ PriceLabs is the dynamic pricing tool.
 - Sync results are tracked per Hub listing as `synced`, `not_found`, or `failed`; never discard Supabase update errors.
 - Duplicate PriceLabs IDs update every matching Hub listing and emit a structured warning for cleanup.
 
-Synced fields include base/min/max/recommended price, cleaning fees, bedrooms, 7/30/90-day occupancy and market occupancy, MPI 30/60, last booked date, weekend occupancy, push enabled, refreshed and synced timestamps.
+Synced fields include base/min/max/recommended price, cleaning fees, bedrooms, 7/30/90-day occupancy and market occupancy, MPI 30/60, last booked date, weekend occupancy, push enabled, refreshed and synced timestamps. Migration 092 also copies `location_lat` / `location_lon` / `location_precision` / `location_source` / `location_observed_at` from the PriceLabs listing read when both coordinates are valid. That copy is Hub-side only and does not push prices, stay rules, or calendar changes.
 
 Display:
 

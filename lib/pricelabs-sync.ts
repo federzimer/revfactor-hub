@@ -6,6 +6,7 @@ import {
   parsePriceLabsDate,
   type PriceLabsListing,
 } from "@/lib/pricelabs"
+import { parseCoordinate } from "@/lib/market-map"
 
 export type PriceLabsSyncStatus = "synced" | "not_found" | "failed"
 
@@ -35,6 +36,23 @@ type PriceLabsSyncDependencies = {
   fetchListings?: () => Promise<PriceLabsListing[]>
   now?: () => string
   logger?: Pick<Console, "info" | "warn" | "error">
+}
+
+export function locationFieldsFromPriceLabs(
+  listing: PriceLabsListing,
+  observedAt: string
+): Record<string, unknown> {
+  const latitude = parseCoordinate(listing.latitude, "lat")
+  const longitude = parseCoordinate(listing.longitude, "lon")
+  if (latitude === null || longitude === null) return {}
+  if (latitude === 0 && longitude === 0) return {}
+  return {
+    location_lat: latitude,
+    location_lon: longitude,
+    location_precision: "exact",
+    location_source: "pricelabs",
+    location_observed_at: observedAt,
+  }
 }
 
 export function buildPriceLabsUpdate(
@@ -74,6 +92,7 @@ export function buildPriceLabsUpdate(
     pl_last_refreshed_at: parsePriceLabsDate(listing.last_refreshed_at),
     pl_synced_at: syncedAt,
     updated_at: syncedAt,
+    ...locationFieldsFromPriceLabs(listing, syncedAt),
   }
 }
 
