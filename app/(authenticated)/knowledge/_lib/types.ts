@@ -1,3 +1,5 @@
+import type { KnowledgeSop } from "@/lib/knowledge-sop"
+
 export type ArticleStatus = "draft" | "published"
 export type KnowledgeArticleType = "faq" | "policy" | "sop" | "guide" | "template"
 export type KnowledgeAudience = "internal" | "client_safe"
@@ -70,6 +72,16 @@ export type KnowledgeArticle = {
   approved_at: string | null
   last_reviewed_at: string | null
   review_due_at: string | null
+  /** Present when article_type is "sop" and a card has been saved. */
+  sop?: KnowledgeSop | null
+}
+
+export type KnowledgeArticleVersion = {
+  id: string
+  version: number
+  change_note: string | null
+  published_at: string
+  published_by_name: string | null
 }
 
 export type KnowledgeStats = {

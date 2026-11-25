@@ -32,6 +32,8 @@ import { TiptapEditor } from "./editor/tiptap-editor"
 import { TagChip } from "./tag-chip"
 import { createArticle, updateArticle, publishArticle } from "../actions"
 import { htmlToExcerpt } from "../_lib/utils"
+import { SopFields, sopFormDefaults } from "./sop-fields"
+import type { SopFormValues } from "@/lib/knowledge-sop"
 import type {
   KnowledgeArticle,
   KnowledgeArticleType,
@@ -80,6 +82,10 @@ export function ArticleForm({
   )
   const [sourceNotes, setSourceNotes] = useState(article?.source_notes ?? "")
   const [reviewDueAt, setReviewDueAt] = useState(article?.review_due_at ?? "")
+  const [sopValues, setSopValues] = useState<SopFormValues>(() =>
+    sopFormDefaults(article?.sop ?? null)
+  )
+  const [changeNote, setChangeNote] = useState("")
 
   function toggleTag(tagId: string) {
     setSelectedTagIds((prev) => {
@@ -110,6 +116,12 @@ export function ArticleForm({
       for (const tagId of selectedTagIds) {
         formData.append("tag_ids", tagId)
       }
+      if (articleType === "sop") {
+        for (const [key, value] of Object.entries(sopValues)) {
+          formData.set(`sop_${key}`, value)
+        }
+      }
+      formData.set("change_note", changeNote)
 
       if (article) {
         const result = await updateArticle(article.id, formData)
@@ -118,7 +130,12 @@ export function ArticleForm({
           return
         }
         if (publish) {
-          await publishArticle(article.id)
+          const published = await publishArticle(article.id, changeNote)
+          if (published.error) {
+            toast.error(published.error)
+            return
+          }
+          if (published.versionError) toast.warning(published.versionError)
         }
         toast.success(publish ? "Article published" : "Article saved")
         router.push(`/knowledge/${article.slug}`)
@@ -352,11 +369,33 @@ export function ArticleForm({
         </CardContent>
       </Card>
 
+      {articleType === "sop" && (
+        <SopFields values={sopValues} onChange={setSopValues} />
+      )}
+
       {/* Editor */}
       <div className="space-y-2">
         <Label>Content</Label>
         <TiptapEditor content={contentHtml} onChange={setContentHtml} />
       </div>
+
+      {canPublish && (
+        <div className="space-y-2">
+          <Label htmlFor="change-note">
+            Change note{" "}
+            <span className="text-muted-foreground font-normal">
+              (saved in version history when you publish)
+            </span>
+          </Label>
+          <Input
+            id="change-note"
+            value={changeNote}
+            onChange={(e) => setChangeNote(e.target.value)}
+            maxLength={500}
+            placeholder="What changed and why"
+          />
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex items-center gap-3 pt-4 border-t">

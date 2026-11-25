@@ -41,7 +41,7 @@ export default async function NewArticlePage({
         categories={categories}
         tags={tags}
         canPublish={canPublish}
-        initialType={type === "faq" ? "faq" : "guide"}
+        initialType={type === "faq" ? "faq" : type === "sop" ? "sop" : "guide"}
       />
     </div>
   )

@@ -13,8 +13,11 @@ import { ArticleHeader } from "../_components/article-header"
 import { ArticleRenderer } from "../_components/article-renderer"
 import { ArticleTableOfContents } from "../_components/article-toc"
 import { ArticleMetadataSidebar } from "../_components/article-metadata-sidebar"
+import { SopPanel } from "../_components/sop-panel"
+import { sopFromEmbed } from "../_lib/sop-embed"
 import type {
   KnowledgeArticle,
+  KnowledgeArticleVersion,
   KnowledgeCategory,
   KnowledgeTag,
 } from "../_lib/types"
@@ -31,7 +34,7 @@ export default async function ArticleDetailPage({ params }: Props) {
   const { data: raw } = await supabase
     .from("knowledge_articles")
     .select(
-      "*, knowledge_article_tags(knowledge_tags(*)), profiles!author_id(id, full_name, avatar_url), knowledge_categories(*)"
+      "*, knowledge_article_tags(knowledge_tags(*)), profiles!author_id(id, full_name, avatar_url), knowledge_categories(*), knowledge_sops(*)"
     )
     .eq("slug", slug)
     .maybeSingle()
@@ -87,6 +90,7 @@ export default async function ArticleDetailPage({ params }: Props) {
     approved_at: raw.approved_at ?? null,
     last_reviewed_at: raw.last_reviewed_at ?? null,
     review_due_at: raw.review_due_at ?? null,
+    sop: sopFromEmbed(raw.knowledge_sops, raw.id),
   }
 
   const [canEdit, canPublish, canDelete] = await Promise.all([
@@ -94,6 +98,27 @@ export default async function ArticleDetailPage({ params }: Props) {
     hasPermission("knowledge", "publish"),
     hasPermission("knowledge", "delete"),
   ])
+  const { data: versionRows } =
+    article.article_type === "sop"
+      ? await supabase
+          .from("knowledge_article_versions")
+          .select("id, version, change_note, published_at, profiles!published_by(full_name)")
+          .eq("article_id", article.id)
+          .order("version", { ascending: false })
+          .limit(10)
+      : { data: [] }
+  const versions: KnowledgeArticleVersion[] = (versionRows ?? []).map((v) => {
+    const by = (Array.isArray(v.profiles) ? v.profiles[0] : v.profiles) as
+      | { full_name?: string | null }
+      | null
+    return {
+      id: v.id,
+      version: v.version,
+      change_note: v.change_note,
+      published_at: v.published_at,
+      published_by_name: by?.full_name ?? null,
+    }
+  })
   const { data: indexedChunks } = article.agent_enabled
     ? await supabase
         .from("knowledge_chunks")
@@ -136,6 +161,9 @@ export default async function ArticleDetailPage({ params }: Props) {
               )}
             </CardContent>
           </Card>
+        )}
+        {article.article_type === "sop" && (
+          <SopPanel slug={article.slug} sop={article.sop ?? null} versions={versions} />
         )}
         <Separator />
         <ArticleRenderer html={article.content_html} />
