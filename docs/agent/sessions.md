@@ -726,3 +726,9 @@ Short rolling summaries of substantive agent work. Keep entries compact and dele
 # 2026-09-03 — Reconciliation build slice
 
 On branch `codex/market-event-reconciliation` from merged main (`ad2e127`), added and tested `lib/market-signals/reconciliation.ts` plus four deterministic Vitest cases. Updated the university source audit and added `docs/market-signals/university-reconciliation-handoff.md`. No database, environment, provider, schedule, or pricing changes were made. Next step is review/integration of durable reconciliation run and delta persistence after the foundation production migration is approved.
+
+## 2026-11-25 — SOP section in Knowledge
+
+- Migration 092: `knowledge_sops`, `knowledge_article_versions`, `account_manager` role (Knowledge only), SOP-group categories. Tested on a local Postgres 16 with stub tables.
+- SOP editor card and article SOP panel (video embed, checklist, guardrails, version history), "Add SOP" button, version snapshot on publish, publisher-only edits of published articles.
+- Agent export (`lib/knowledge-sop.ts`, `/api/knowledge/sops/[slug]`, `/api/v1/sops`) with Vitest coverage. Standard in `docs/agent/sop-standard.md`. No articles or prod data changed.

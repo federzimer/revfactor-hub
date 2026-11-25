@@ -34,6 +34,14 @@ export function KnowledgeHeaderActions({
           </Button>
         )}
         {canCreate && (
+          <Button asChild variant="outline">
+            <Link href="/knowledge/new?type=sop">
+              <Plus data-icon="inline-start" />
+              Add SOP
+            </Link>
+          </Button>
+        )}
+        {canCreate && (
           <Button asChild>
             <Link href="/knowledge/new">
               <Plus data-icon="inline-start" />

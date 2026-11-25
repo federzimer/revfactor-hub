@@ -5,6 +5,101 @@ import { hasPermission } from "@/lib/permissions.server"
 import { indexKnowledgeArticle } from "@/lib/knowledge-retrieval.server"
 import { createClient } from "@/lib/supabase/server"
 import { estimateReadingTime, htmlToExcerpt } from "./_lib/utils"
+import { parseSopForm, type SopFormValues } from "@/lib/knowledge-sop"
+
+type SupabaseServer = Awaited<ReturnType<typeof createClient>>
+
+const SOP_FORM_KEYS: (keyof SopFormValues)[] = [
+  "sop_code",
+  "trigger_text",
+  "runs_role",
+  "backup_role",
+  "owner_label",
+  "approval_class",
+  "hub_record",
+  "proof",
+  "agent_mode",
+  "inputs",
+  "steps",
+  "guardrails",
+  "escalate_when",
+  "video_url",
+  "video_duration_sec",
+]
+
+function readSopForm(formData: FormData): SopFormValues {
+  const values = {} as SopFormValues
+  for (const key of SOP_FORM_KEYS) {
+    values[key] = String(formData.get(`sop_${key}`) ?? "")
+  }
+  return values
+}
+
+/** Upsert the SOP card for an article typed as SOP. */
+async function saveSopCard(
+  supabase: SupabaseServer,
+  articleId: string,
+  formData: FormData
+): Promise<string | null> {
+  const parsed = parseSopForm(readSopForm(formData))
+  if (!parsed.ok) return parsed.error
+  const { error } = await supabase.from("knowledge_sops").upsert(
+    {
+      article_id: articleId,
+      ...parsed.row,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "article_id" }
+  )
+  if (error) {
+    return error.code === "23505"
+      ? "That SOP code is already used by another SOP."
+      : error.message
+  }
+  return null
+}
+
+/**
+ * Append an immutable version snapshot. Called on every publish so the Hub can
+ * show which version of an SOP was live on a given day.
+ */
+async function snapshotVersion(
+  supabase: SupabaseServer,
+  articleId: string,
+  userId: string,
+  changeNote: string | null
+): Promise<string | null> {
+  const [{ data: article }, { data: sop }, { data: latest }] = await Promise.all([
+    supabase
+      .from("knowledge_articles")
+      .select("title, content_html")
+      .eq("id", articleId)
+      .maybeSingle(),
+    supabase
+      .from("knowledge_sops")
+      .select("*")
+      .eq("article_id", articleId)
+      .maybeSingle(),
+    supabase
+      .from("knowledge_article_versions")
+      .select("version")
+      .eq("article_id", articleId)
+      .order("version", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ])
+  if (!article) return "Article not found."
+  const { error } = await supabase.from("knowledge_article_versions").insert({
+    article_id: articleId,
+    version: (latest?.version ?? 0) + 1,
+    title: article.title,
+    content_html: article.content_html,
+    sop: sop ?? null,
+    change_note: changeNote?.slice(0, 500) || null,
+    published_by: userId,
+  })
+  return error ? error.message : null
+}
 
 function generateSlug(title: string): string {
   return title
@@ -93,6 +188,23 @@ export async function createArticle(formData: FormData) {
     await supabase.from("knowledge_article_tags").insert(tagRows)
   }
 
+  if (articleType === "sop") {
+    const sopError = await saveSopCard(supabase, article.id, formData)
+    if (sopError) {
+      revalidatePath("/knowledge")
+      return { error: `Saved as article, but the SOP card failed: ${sopError}`, slug: article.slug }
+    }
+  }
+  if (publish) {
+    const versionError = await snapshotVersion(
+      supabase,
+      article.id,
+      user.id,
+      String(formData.get("change_note") || "").trim() || "First version"
+    )
+    if (versionError) console.error("knowledge version snapshot failed", versionError)
+  }
+
   revalidatePath("/knowledge")
   return { error: null, slug: article.slug }
 }
@@ -125,6 +237,26 @@ export async function updateArticle(id: string, formData: FormData) {
     String(formData.get("escalation_guidance") || "").trim() || null
   const sourceNotes = String(formData.get("source_notes") || "").trim() || null
   const reviewDueAt = String(formData.get("review_due_at") || "").trim() || null
+
+  // A published article changes only through someone who can publish, so
+  // every live change gets a version snapshot. Account managers draft; Fede or
+  // Gaston publish.
+  const { data: current } = await supabase
+    .from("knowledge_articles")
+    .select("status")
+    .eq("id", id)
+    .maybeSingle()
+  if (current?.status === "published" && !(await hasPermission("knowledge", "publish"))) {
+    return {
+      error:
+        "This article is published. Only a publisher can change it; send your edit to Fede or Gaston.",
+    }
+  }
+
+  if (articleType === "sop") {
+    const check = parseSopForm(readSopForm(formData))
+    if (!check.ok) return { error: check.error }
+  }
 
   const { error } = await supabase
     .from("knowledge_articles")
@@ -161,6 +293,11 @@ export async function updateArticle(id: string, formData: FormData) {
     await supabase.from("knowledge_article_tags").insert(tagRows)
   }
 
+  if (articleType === "sop") {
+    const sopError = await saveSopCard(supabase, id, formData)
+    if (sopError) return { error: sopError }
+  }
+
   revalidatePath("/knowledge")
   return { error: null }
 }
@@ -178,11 +315,15 @@ export async function deleteArticle(id: string) {
   return { error: null }
 }
 
-export async function publishArticle(id: string) {
+export async function publishArticle(id: string, changeNote?: string) {
   if (!(await hasPermission("knowledge", "publish"))) {
     return { error: "You do not have permission to publish Knowledge." }
   }
   const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated" }
   const { error } = await supabase
     .from("knowledge_articles")
     .update({
@@ -194,8 +335,20 @@ export async function publishArticle(id: string) {
 
   if (error) return { error: error.message }
 
+  const versionError = await snapshotVersion(
+    supabase,
+    id,
+    user.id,
+    changeNote?.trim() || null
+  )
+
   revalidatePath("/knowledge")
-  return { error: null }
+  return {
+    error: null,
+    versionError: versionError
+      ? `Published, but the version history was not saved: ${versionError}`
+      : null,
+  }
 }
 
 export async function unpublishArticle(id: string) {

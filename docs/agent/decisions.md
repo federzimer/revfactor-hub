@@ -472,3 +472,7 @@ Decisions that shape the removal:
 # 2026-09-03 — University reconciliation remains pure until activation gate
 
 The official university source slice now includes a side-effect-free reconciliation engine. It deterministically selects canonical observations, retains corroborating evidence/conflicts, classifies date/status changes, and only reports missing future occurrences for explicitly complete snapshots. Supabase persistence, durable run/delta storage, source activation, and commercial actions remain separate follow-up work behind the RF-INTEL-001 production migration gate.
+
+# 2026-11-25 — SOPs live in the Hub Knowledge base, one record for people and agents
+
+Fede approved the Hub Knowledge base as the home for RevFactor SOPs (wikifactor, Drive and Notion link to it). An SOP stays a `knowledge_articles` row typed `sop` with a 1:1 `knowledge_sops` card, rather than new columns on the article, because the existing article fields serve client-answer governance and an SOP needs a different contract (trigger, Hub record, proof, guardrails, change class). Publishing writes an immutable version so a later review can see which version was live. Published articles can only be edited by publishers, so account managers draft and Fede or Gaston publish. The agent format is Markdown with YAML front matter generated from the card, served by session (`/api/knowledge/sops/[slug]`) and by API key (`/api/v1/sops`, scope `sops:read`, published only). Change classes A/B/C follow the AM pricing playbook. See `docs/agent/sop-standard.md`.

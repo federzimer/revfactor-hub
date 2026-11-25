@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation"
 import { hasPermission } from "@/lib/permissions.server"
 import { createClient } from "@/lib/supabase/server"
 import { ArticleForm } from "../../_components/article-form"
+import { sopFromEmbed } from "../../_lib/sop-embed"
 import type { KnowledgeArticle, KnowledgeCategory, KnowledgeTag } from "../../_lib/types"
 
 type Props = {
@@ -17,7 +18,7 @@ export default async function EditArticlePage({ params }: Props) {
   const { data: raw } = await supabase
     .from("knowledge_articles")
     .select(
-      "*, knowledge_article_tags(knowledge_tags(*)), profiles!author_id(id, full_name, avatar_url), knowledge_categories(*)"
+      "*, knowledge_article_tags(knowledge_tags(*)), profiles!author_id(id, full_name, avatar_url), knowledge_categories(*), knowledge_sops(*)"
     )
     .eq("slug", slug)
     .maybeSingle()
@@ -87,6 +88,7 @@ export default async function EditArticlePage({ params }: Props) {
     approved_at: raw.approved_at ?? null,
     last_reviewed_at: raw.last_reviewed_at ?? null,
     review_due_at: raw.review_due_at ?? null,
+    sop: sopFromEmbed(raw.knowledge_sops, raw.id),
   }
 
   const canPublish = await hasPermission("knowledge", "publish")
