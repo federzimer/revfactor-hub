@@ -22,6 +22,7 @@ import {
   FileChartColumnIncreasing,
   Trophy,
   CalendarRange,
+  Workflow,
 } from "lucide-react"
 import * as React from "react"
 import Image from "next/image"
@@ -81,6 +82,12 @@ const navItems: NavItem[] = [
     resource: "reservations",
   },
   { title: "Tasks", href: "/tasks", icon: CheckSquare, resource: "tasks" },
+  {
+    title: "Automations",
+    href: "/automations",
+    icon: Workflow,
+    resource: "automations",
+  },
   {
     title: "Adjustments",
     href: "/adjustments",

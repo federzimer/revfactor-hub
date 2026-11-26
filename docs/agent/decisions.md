@@ -1,5 +1,9 @@
 # Decisions — RevFactor Hub
 
+## 2026-11-26 — One Automation Registry Across Runners, Synced From n8n by n8n
+
+Automations live on several runners (Vercel crons, n8n, GHL, Grokbot, Claude tasks, Railway). The Hub keeps one `automations` table so the team sees what runs, who owns it, what it changes and whether its last run worked. n8n rows sync from the n8n public API; other runners are entered by hand until they report in. The sync is triggered by n8n calling a `CRON_SECRET`-protected route plus a manual "Sync now" button, not by a new Vercel cron, because the Vercel plan rejects extra high-frequency crons. Sync owns only identity/status columns so human-entered owner, output and notes are never overwritten. Every automation that sends a message or changes client data must write a Hub record ("no log, no send"); the registry flags rows that don't.
+
 ## 2026-09-03 — Official University Pages Require Governed Precedence and Three Activation Gates
 
 Commencement and family-program pages are canonical for their own dates; registrar calendars are corroborating future-year placeholders; general campus calendars are discovery-only. Future activation must retain conflicting observations as evidence and prefer the more specific program page rather than allowing last-writer-wins behavior. The current adapter labels authority tiers but does not yet reconcile overlapping observations, so a precedence-safe reconciliation slice is required before any source is enabled. The reusable page adapter is code-complete for bounded iCalendar, JSON-LD, HTML, and first-party REST HTML, but collection also requires `collection_status=enabled`, an active source row, and `UNIVERSITY_PAGE_INGESTION_ENABLED=true`. No one condition can activate it alone.

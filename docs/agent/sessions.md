@@ -1,5 +1,11 @@
 # Sessions — RevFactor Hub
 
+## 2026-11-26 — Automation registry and n8n sync
+
+- Added the `automations` table (timestamp migration, permission-based RLS, new `automations` resource, seeded the two Vercel crons).
+- Added `/automations` (stat cards, runner/status filters, log-rule flag, Sync n8n now) and `GET /api/cron/sync-automations` for n8n to call on a schedule.
+- n8n API client and sync live in `lib/automations/`; env `N8N_BASE_URL` / `N8N_API_KEY` are optional.
+
 ## 2026-09-03 — Listing status independence in `/listings`
 
 - Corrected the `/listings` status filter to use `listings.status` instead of

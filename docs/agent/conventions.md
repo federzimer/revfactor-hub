@@ -134,12 +134,16 @@ STRIPE_SECRET_KEY=
 AI_GATEWAY_API_KEY=
 ONBOARDING_ENTITLEMENT_SYNC_ENABLED=false
 CRON_SECRET=
+N8N_BASE_URL=
+N8N_API_KEY=
 WHATSAPP_GROUP_INVITE_URL=
 ```
 
 `WHATSAPP_GROUP_INVITE_URL` is the team WhatsApp group invite (`https://chat.whatsapp.com/<code>`), read server-side in the Adjustments create flow only. Never expose it on the public `/a/` shell or in Open Graph tags — anyone with the invite link can join the group.
 
 Rules: no quotes, no spaces after `=`, and only `NEXT_PUBLIC_` variables are browser-accessible.
+
+`N8N_BASE_URL` (no trailing slash) and `N8N_API_KEY` connect the Automations page to the self-hosted n8n public API. Both are optional: without them the page still lists hand-entered rows and shows a "not connected" notice. Server-only.
 
 `AI_GATEWAY_API_KEY` is required for local Agent Studio model runs. Vercel deployments may instead authenticate AI Gateway through Vercel OIDC. Keep both credentials server-only.
 

@@ -1,5 +1,13 @@
 # Integrations — RevFactor Hub
 
+## n8n (Automation registry sync, 2026-11-26)
+
+- Self-hosted n8n Community Edition on Railway (template "n8n (w/ postgres)"). CE allows separate logins but not workflow/credential sharing, so the Hub `/automations` page is where the team sees every workflow.
+- The Hub reads the n8n public API v1 with `X-N8N-API-KEY`: `GET /api/v1/workflows` (cursor pagination, `limit=100`) and `GET /api/v1/executions?workflowId=<id>&limit=1` for the last run. Status mapping: `success`→success, `error|crashed`→error, `running|new`→running, `waiting`→waiting, `canceled`→canceled, else unknown. Schedule text is derived from trigger node types.
+- Sync writes only n8n-owned columns and marks rows for workflows that disappeared as inactive (never deletes).
+- Vercel's plan rejects extra high-frequency crons, so n8n triggers the sync: an n8n schedule workflow calls `GET /api/cron/sync-automations` with `Authorization: Bearer <CRON_SECRET>`.
+- Rule ("no log, no send"): an n8n workflow that sends a message or changes client data must write a Hub record of what it did; set `changes_data`/`logs_to_hub` on its registry row so the page can flag gaps.
+
 ## AirROI
 
 AirROI is the optional public-listing enrichment source for the Revenue Brief Builder.
